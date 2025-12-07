@@ -1,0 +1,1244 @@
+---
+title: Complete ROS 2 Package Project - Building Your First Robot Application
+---
+
+import ChapterControls from '@site/src/components/ChapterControls';
+
+<ChapterControls 
+  chapterContent={`
+    # Your chapter content here
+    
+    This is the text that will be personalized and translated.
+  `}
+  userBackground={
+    typeof window !== 'undefined' 
+      ? JSON.parse(localStorage.getItem('user') || '{}') 
+      : {}
+  }
+/>
+
+<!-- Rest of your chapter content -->
+
+
+
+---
+sidebar_position: 8
+---
+
+# 🏗️ Complete ROS 2 Package Project - Building Your First Robot Application
+
+In this comprehensive project, you'll build a complete ROS 2 package that integrates all the concepts learned in Module 1. You'll create a mobile robot application that includes nodes for sensor processing, navigation, and control, all orchestrated with launch files and described with URDF.
+
+## 🎯 Learning Objectives
+
+By the end of this project, you will:
+- Create a complete ROS 2 package with multiple nodes and message types
+- Implement a robot description with URDF and Xacro
+- Build launch files for different operational modes
+- Integrate services, actions, and parameters for runtime configuration
+- Test and validate your complete robot system
+
+## 🏗️ Project Overview: Autonomous Delivery Robot
+
+You'll build an autonomous delivery robot system that includes:
+- Robot description (URDF/Xacro)
+- Sensor processing nodes
+- Navigation and path planning
+- State machine for delivery operations
+- Launch files for simulation and real robot
+- Configuration files and parameters
+
+:::info Did You Know?
+This project combines all the core concepts of ROS 2: nodes, topics, services, actions, parameters, launch files, and URDF.
+:::
+
+### Package Structure
+
+First, let's create the complete package structure:
+
+```
+delivery_robot/
+├── CMakeLists.txt
+├── package.xml
+├── setup.py
+├── setup.cfg
+├── resource/delivery_robot
+├── delivery_robot/
+│   ├── __init__.py
+│   ├── robot_controller.py
+│   ├── sensor_processor.py
+│   ├── delivery_state_machine.py
+│   └── utils/
+│       ├── __init__.py
+│       └── robot_helpers.py
+├── launch/
+│   ├── delivery_robot.launch.py
+│   ├── simulation.launch.py
+│   └── real_robot.launch.py
+├── config/
+│   ├── robot_params.yaml
+│   ├── navigation_params.yaml
+│   └── sensors_params.yaml
+├── urdf/
+│   ├── robot.urdf.xacro
+│   ├── materials.xacro
+│   └── sensors.xacro
+├── msg/
+│   └── DeliveryStatus.msg
+├── srv/
+│   └── RequestDelivery.srv
+├── action/
+│   └── DeliverItem.action
+└── rviz/
+    └── robot_view.rviz
+```
+
+## 🔧 Creating the Package Files
+
+### 1. Package Manifest (package.xml)
+
+```xml
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>delivery_robot</name>
+  <version>1.0.0</version>
+  <description>Autonomous delivery robot system</description>
+  <maintainer email="robotics@example.com">Robotics Team</maintainer>
+  <license>Apache-2.0</license>
+
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>nav_msgs</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>joint_state_publisher</exec_depend>
+  <exec_depend>rviz2</exec_depend>
+
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>
+```
+
+### 2. Setup Configuration (setup.py)
+
+```python
+from setuptools import setup
+from glob import glob
+import os
+
+package_name = 'delivery_robot'
+
+setup(
+    name=package_name,
+    version='1.0.0',
+    packages=[package_name],
+    data_files=[
+        ('share/ament_index/resource_index/packages',
+            ['resource/' + package_name]),
+        ('share/' + package_name, ['package.xml']),
+        # Include launch files
+        (os.path.join('share', package_name, 'launch'), glob('launch/*.launch.py')),
+        # Include config files
+        (os.path.join('share', package_name, 'config'), glob('config/*.yaml')),
+        # Include URDF files
+        (os.path.join('share', package_name, 'urdf'), glob('urdf/*.xacro')),
+        (os.path.join('share', package_name, 'urdf'), glob('urdf/*.urdf')),
+        # Include RViz config
+        (os.path.join('share', package_name, 'rviz'), glob('rviz/*.rviz')),
+    ],
+    install_requires=['setuptools'],
+    zip_safe=True,
+    maintainer='Robotics Team',
+    maintainer_email='robotics@example.com',
+    description='Autonomous delivery robot system',
+    license='Apache-2.0',
+    tests_require=['pytest'],
+    entry_points={
+        'console_scripts': [
+            'robot_controller = delivery_robot.robot_controller:main',
+            'sensor_processor = delivery_robot.sensor_processor:main',
+            'delivery_state_machine = delivery_robot.delivery_state_machine:main',
+        ],
+    },
+)
+```
+
+### 3. Robot Description (URDF/Xacro)
+
+```xml
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="delivery_robot">
+
+  <!-- Properties -->
+  <xacro:property name="M_PI" value="3.1415926535897931" />
+  <xacro:property name="base_width" value="0.6" />
+  <xacro:property name="base_length" value="0.8" />
+  <xacro:property name="base_height" value="0.3" />
+  <xacro:property name="wheel_radius" value="0.15" />
+  <xacro:property name="wheel_width" value="0.05" />
+  <xacro:property name="wheel_offset_x" value="0.3" />
+  <xacro:property name="wheel_offset_y" value="0.3" />
+
+  <!-- Materials -->
+  <material name="blue">
+    <color rgba="0.0 0.0 0.8 1.0"/>
+  </material>
+  <material name="black">
+    <color rgba="0.0 0.0 0.0 1.0"/>
+  </material>
+  <material name="white">
+    <color rgba="1.0 1.0 1.0 1.0"/>
+  </material>
+
+  <!-- Base Link -->
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <box size="${base_length} ${base_width} ${base_height}"/>
+      </geometry>
+      <material name="blue"/>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="${base_length} ${base_width} ${base_height}"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="10.0"/>
+      <inertia ixx="1.0" ixy="0.0" ixz="0.0"
+               iyy="1.0" iyz="0.0" izz="1.0"/>
+    </inertial>
+  </link>
+
+  <!-- Wheels -->
+  <xacro:macro name="wheel" params="prefix x_reflect y_reflect">
+    <link name="${prefix}_wheel">
+      <visual>
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+        </geometry>
+        <material name="black"/>
+      </visual>
+      <collision>
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <mass value="0.5"/>
+        <inertia ixx="0.01" ixy="0.0" ixz="0.0"
+                 iyy="0.01" iyz="0.0" izz="0.01"/>
+      </inertial>
+    </link>
+
+    <joint name="${prefix}_wheel_joint" type="continuous">
+      <parent link="base_link"/>
+      <child link="${prefix}_wheel"/>
+      <origin xyz="${x_reflect * wheel_offset_x} ${y_reflect * wheel_offset_y} -${wheel_radius}"
+              rpy="${M_PI/2} 0 0"/>
+      <axis xyz="0 0 1"/>
+    </joint>
+  </xacro:macro>
+
+  <xacro:wheel prefix="front_left" x_reflect="1" y_reflect="1"/>
+  <xacro:wheel prefix="front_right" x_reflect="1" y_reflect="-1"/>
+  <xacro:wheel prefix="rear_left" x_reflect="-1" y_reflect="1"/>
+  <xacro:wheel prefix="rear_right" x_reflect="-1" y_reflect="-1"/>
+
+  <!-- Camera -->
+  <link name="camera_link">
+    <visual>
+      <geometry>
+        <box size="0.05 0.05 0.05"/>
+      </geometry>
+      <material name="white"/>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.05 0.05 0.05"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.1"/>
+      <inertia ixx="0.001" ixy="0.0" ixz="0.0"
+               iyy="0.001" iyz="0.0" izz="0.001"/>
+    </inertial>
+  </link>
+
+  <joint name="camera_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="camera_link"/>
+    <origin xyz="${base_length/2 - 0.05} 0 ${base_height/2}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- LiDAR -->
+  <link name="lidar_link">
+    <visual>
+      <geometry>
+        <cylinder radius="0.05" length="0.05"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder radius="0.05" length="0.05"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.2"/>
+      <inertia ixx="0.002" ixy="0.0" ixz="0.0"
+               iyy="0.002" iyz="0.0" izz="0.002"/>
+    </inertial>
+  </link>
+
+  <joint name="lidar_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="lidar_link"/>
+    <origin xyz="0 0 ${base_height/2 + 0.05}" rpy="0 0 0"/>
+  </joint>
+
+</robot>
+```
+
+### 4. Main Robot Controller Node
+
+```python
+# delivery_robot/robot_controller.py
+import rclpy
+from rclpy.node import Node
+from geometry_msgs.msg import Twist, Pose
+from sensor_msgs.msg import LaserScan
+from nav_msgs.msg import Odometry
+from std_msgs.msg import String
+from rclpy.qos import QoSProfile
+from rclpy.action import ActionClient
+from rclpy.parameter import Parameter
+from tf2_ros import TransformBroadcaster
+import math
+import numpy as np
+
+class RobotController(Node):
+    def __init__(self):
+        super().__init__('robot_controller')
+
+        # Declare parameters
+        self.declare_parameter('max_linear_velocity', 0.5)
+        self.declare_parameter('max_angular_velocity', 1.0)
+        self.declare_parameter('safety_distance', 0.5)
+        self.declare_parameter('robot_radius', 0.3)
+
+        # Get parameter values
+        self.max_linear_vel = self.get_parameter('max_linear_velocity').value
+        self.max_angular_vel = self.get_parameter('max_angular_velocity').value
+        self.safety_distance = self.get_parameter('safety_distance').value
+        self.robot_radius = self.get_parameter('robot_radius').value
+
+        # Publishers
+        self.cmd_vel_pub = self.create_publisher(Twist, 'cmd_vel', 10)
+        self.status_pub = self.create_publisher(String, 'robot_status', 10)
+
+        # Subscribers
+        self.scan_sub = self.create_subscription(
+            LaserScan, 'scan', self.scan_callback, 10
+        )
+        self.odom_sub = self.create_subscription(
+            Odometry, 'odom', self.odom_callback, 10
+        )
+
+        # Timer for control loop
+        self.control_timer = self.create_timer(0.1, self.control_loop)
+
+        # Robot state
+        self.current_pose = Pose()
+        self.current_twist = Twist()
+        self.scan_data = None
+        self.emergency_stop = False
+        self.target_pose = None
+
+        # TF broadcaster
+        self.tf_broadcaster = TransformBroadcaster(self)
+
+        self.get_logger().info('Robot Controller initialized')
+
+    def odom_callback(self, msg):
+        """Update robot pose from odometry"""
+        self.current_pose = msg.pose.pose
+        self.current_twist = msg.twist.twist
+
+    def scan_callback(self, msg):
+        """Process laser scan data"""
+        self.scan_data = msg
+
+    def control_loop(self):
+        """Main control loop"""
+        if self.scan_data is None:
+            return
+
+        # Check for obstacles
+        if self.check_obstacles():
+            cmd_vel = Twist()
+            cmd_vel.linear.x = 0.0
+            cmd_vel.angular.z = 0.0
+            self.emergency_stop = True
+        else:
+            # Calculate control command based on target
+            cmd_vel = self.calculate_control_command()
+            self.emergency_stop = False
+
+        # Publish command
+        self.cmd_vel_pub.publish(cmd_vel)
+
+        # Publish status
+        status_msg = String()
+        status_msg.data = 'EMERGENCY_STOP' if self.emergency_stop else 'NORMAL'
+        self.status_pub.publish(status_msg)
+
+    def check_obstacles(self):
+        """Check for obstacles in the robot's path"""
+        if self.scan_data is None:
+            return False
+
+        # Check front sector (±30 degrees)
+        front_start = len(self.scan_data.ranges) // 2 - 30
+        front_end = len(self.scan_data.ranges) // 2 + 30
+
+        if front_start < 0:
+            front_start = 0
+        if front_end >= len(self.scan_data.ranges):
+            front_end = len(self.scan_data.ranges) - 1
+
+        for i in range(front_start, front_end):
+            if (self.scan_data.ranges[i] < self.safety_distance and
+                not math.isnan(self.scan_data.ranges[i]) and
+                not math.isinf(self.scan_data.ranges[i])):
+                return True
+
+        return False
+
+    def calculate_control_command(self):
+        """Calculate velocity command to reach target"""
+        cmd_vel = Twist()
+
+        if self.target_pose is None:
+            return cmd_vel
+
+        # Calculate distance and angle to target
+        dx = self.target_pose.position.x - self.current_pose.position.x
+        dy = self.target_pose.position.y - self.current_pose.position.y
+        distance = math.sqrt(dx*dx + dy*dy)
+
+        # Calculate target angle
+        target_angle = math.atan2(dy, dx)
+        current_angle = self.get_yaw_from_quaternion(self.current_pose.orientation)
+
+        # Calculate angle difference
+        angle_diff = target_angle - current_angle
+        # Normalize angle to [-π, π]
+        while angle_diff > math.pi:
+            angle_diff -= 2 * math.pi
+        while angle_diff < -math.pi:
+            angle_diff += 2 * math.pi
+
+        # PID-like control
+        angular_kp = 1.0
+        linear_kp = 0.5
+
+        # Rotate to face target if not aligned
+        if abs(angle_diff) > 0.1:  # 0.1 rad = ~5.7 degrees
+            cmd_vel.angular.z = max(-self.max_angular_vel,
+                                  min(self.max_angular_vel,
+                                      angular_kp * angle_diff))
+        elif distance > 0.1:  # 0.1m threshold
+            cmd_vel.linear.x = max(0.0,
+                                 min(self.max_linear_vel,
+                                     linear_kp * distance))
+
+        return cmd_vel
+
+    def get_yaw_from_quaternion(self, quaternion):
+        """Extract yaw from quaternion"""
+        siny_cosp = 2 * (quaternion.w * quaternion.z + quaternion.x * quaternion.y)
+        cosy_cosp = 1 - 2 * (quaternion.y * quaternion.y + quaternion.z * quaternion.z)
+        return math.atan2(siny_cosp, cosy_cosp)
+
+    def set_target(self, target_pose):
+        """Set navigation target"""
+        self.target_pose = target_pose
+
+def main(args=None):
+    rclpy.init(args=args)
+
+    robot_controller = RobotController()
+
+    try:
+        rclpy.spin(robot_controller)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        robot_controller.destroy_node()
+        rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
+```
+
+### 5. Sensor Processing Node
+
+```python
+# delivery_robot/sensor_processor.py
+import rclpy
+from rclpy.node import Node
+from sensor_msgs.msg import LaserScan, Image, PointCloud2
+from geometry_msgs.msg import PointStamped
+from std_msgs.msg import Header
+from cv_bridge import CvBridge
+import cv2
+import numpy as np
+from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
+
+class SensorProcessor(Node):
+    def __init__(self):
+        super().__init__('sensor_processor')
+
+        # Declare parameters
+        self.declare_parameter('processing_rate', 10.0)
+        self.declare_parameter('detection_threshold', 0.5)
+
+        # Get parameter values
+        self.processing_rate = self.get_parameter('processing_rate').value
+        self.detection_threshold = self.get_parameter('detection_threshold').value
+
+        # Publishers
+        self.object_pub = self.create_publisher(PointStamped, 'detected_object', 10)
+        self.processed_scan_pub = self.create_publisher(LaserScan, 'processed_scan', 10)
+
+        # Subscribers
+        self.scan_sub = self.create_subscription(
+            LaserScan, 'scan', self.scan_callback, 10
+        )
+        self.image_sub = self.create_subscription(
+            Image, 'camera/image_raw', self.image_callback, 10
+        )
+
+        # CV Bridge for image processing
+        self.cv_bridge = CvBridge()
+
+        # Timer for processing
+        self.process_timer = self.create_timer(1.0/self.processing_rate, self.process_sensors)
+
+        # Sensor data storage
+        self.latest_scan = None
+        self.latest_image = None
+        self.objects_detected = []
+
+        self.get_logger().info('Sensor Processor initialized')
+
+    def scan_callback(self, msg):
+        """Store latest laser scan data"""
+        self.latest_scan = msg
+
+    def image_callback(self, msg):
+        """Process camera image"""
+        try:
+            cv_image = self.cv_bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
+            self.process_image(cv_image)
+        except Exception as e:
+            self.get_logger().error(f'Error processing image: {e}')
+
+    def process_sensors(self):
+        """Process sensor data and detect objects"""
+        if self.latest_scan is not None:
+            # Process laser scan for obstacles
+            processed_scan = self.process_laser_scan(self.latest_scan)
+            self.processed_scan_pub.publish(processed_scan)
+
+        if self.latest_image is not None:
+            # Process image for object detection
+            self.detect_objects_in_image(self.latest_image)
+
+    def process_laser_scan(self, scan_msg):
+        """Process laser scan data"""
+        # Create a copy of the scan with processed data
+        processed_scan = LaserScan()
+        processed_scan.header = scan_msg.header
+        processed_scan.angle_min = scan_msg.angle_min
+        processed_scan.angle_max = scan_msg.angle_max
+        processed_scan.angle_increment = scan_msg.angle_increment
+        processed_scan.time_increment = scan_msg.time_increment
+        processed_scan.scan_time = scan_msg.scan_time
+        processed_scan.range_min = scan_msg.range_min
+        processed_scan.range_max = scan_msg.range_max
+
+        # Process ranges - for example, remove invalid readings
+        processed_ranges = []
+        for r in scan_msg.ranges:
+            if r < scan_msg.range_min or r > scan_msg.range_max or np.isnan(r):
+                processed_ranges.append(float('inf'))  # Mark as invalid
+            else:
+                processed_ranges.append(r)
+
+        processed_scan.ranges = processed_ranges
+        processed_scan.intensities = scan_msg.intensities
+
+        return processed_scan
+
+    def process_image(self, cv_image):
+        """Process image for basic features"""
+        # Convert to grayscale
+        gray = cv2.cvtColor(cv_image, cv2.COLOR_BGR2GRAY)
+
+        # Apply Gaussian blur
+        blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+
+        # Apply Canny edge detection
+        edges = cv2.Canny(blurred, 50, 150)
+
+        # Find contours
+        contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        # Process contours (objects)
+        for contour in contours:
+            area = cv2.contourArea(contour)
+            if area > 100:  # Filter small contours
+                # Get bounding box
+                x, y, w, h = cv2.boundingRect(contour)
+
+                # Calculate center
+                center_x = x + w // 2
+                center_y = y + h // 2
+
+                # Create point message
+                point_msg = PointStamped()
+                point_msg.header = Header()
+                point_msg.header.stamp = self.get_clock().now().to_msg()
+                point_msg.header.frame_id = 'camera_link'
+                point_msg.point.x = center_x
+                point_msg.point.y = center_y
+                point_msg.point.z = 0.0  # Depth would come from stereo/depth camera
+
+                # Publish detected object
+                self.object_pub.publish(point_msg)
+
+    def detect_objects_in_image(self, image_msg):
+        """Object detection in image (placeholder for more complex detection)"""
+        # This would typically use a neural network or computer vision algorithm
+        # For now, we'll use the basic image processing above
+        pass
+
+def main(args=None):
+    rclpy.init(args=args)
+
+    sensor_processor = SensorProcessor()
+
+    try:
+        rclpy.spin(sensor_processor)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        sensor_processor.destroy_node()
+        rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
+```
+
+### 6. Delivery State Machine Node
+
+```python
+# delivery_robot/delivery_state_machine.py
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import String, Bool
+from geometry_msgs.msg import Pose
+from rclpy.action import ActionClient
+from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
+from rclpy.qos import QoSProfile
+from enum import Enum
+import time
+
+class DeliveryState(Enum):
+    IDLE = 1
+    NAVIGATING_TO_PICKUP = 2
+    WAITING_AT_PICKUP = 3
+    NAVIGATING_TO_DELIVERY = 4
+    WAITING_AT_DELIVERY = 5
+    RETURNING_TO_BASE = 6
+    EMERGENCY_STOP = 7
+
+class DeliveryStateMachine(Node):
+    def __init__(self):
+        super().__init__('delivery_state_machine')
+
+        # State management
+        self.current_state = DeliveryState.IDLE
+        self.previous_state = None
+
+        # Declare parameters
+        self.declare_parameter('delivery_timeout', 300)  # 5 minutes
+        self.declare_parameter('pickup_timeout', 120)   # 2 minutes
+
+        # Get parameter values
+        self.delivery_timeout = self.get_parameter('delivery_timeout').value
+        self.pickup_timeout = self.get_parameter('pickup_timeout').value
+
+        # Publishers
+        self.state_pub = self.create_publisher(String, 'delivery_state', 10)
+        self.emergency_pub = self.create_publisher(Bool, 'emergency_stop', 10)
+
+        # Subscribers
+        self.command_sub = self.create_subscription(
+            String, 'delivery_command', self.command_callback, 10
+        )
+        self.status_sub = self.create_subscription(
+            String, 'robot_status', self.status_callback, 10
+        )
+
+        # Timer for state processing
+        self.state_timer = self.create_timer(0.1, self.state_machine_callback)
+
+        # Delivery information
+        self.delivery_queue = []
+        self.current_delivery = None
+        self.pickup_location = Pose()
+        self.delivery_location = Pose()
+        self.base_location = Pose()
+
+        # Timers for timeouts
+        self.delivery_start_time = None
+        self.pickup_start_time = None
+
+        self.get_logger().info('Delivery State Machine initialized')
+
+    def command_callback(self, msg):
+        """Handle delivery commands"""
+        command = msg.data.lower()
+
+        if command.startswith('deliver_to:'):
+            # Parse delivery location from command
+            # Format: "deliver_to:x,y,z"
+            try:
+                coords = command.split(':')[1].split(',')
+                x, y, z = float(coords[0]), float(coords[1]), float(coords[2])
+
+                # Set delivery location
+                self.delivery_location.position.x = x
+                self.delivery_location.position.y = y
+                self.delivery_location.position.z = z
+
+                # Start delivery process
+                if self.current_state == DeliveryState.IDLE:
+                    self.current_state = DeliveryState.NAVIGATING_TO_PICKUP
+                    self.delivery_start_time = time.time()
+                    self.get_logger().info(f'Starting delivery to ({x}, {y}, {z})')
+            except Exception as e:
+                self.get_logger().error(f'Error parsing delivery command: {e}')
+
+        elif command == 'emergency_stop':
+            self.current_state = DeliveryState.EMERGENCY_STOP
+            self.emergency_stop()
+
+        elif command == 'resume':
+            if self.current_state == DeliveryState.EMERGENCY_STOP:
+                self.current_state = DeliveryState.IDLE
+                self.get_logger().info('Resuming from emergency stop')
+
+    def status_callback(self, msg):
+        """Handle robot status updates"""
+        status = msg.data
+
+        # If robot reports emergency stop, update our state
+        if status == 'EMERGENCY_STOP' and self.current_state != DeliveryState.EMERGENCY_STOP:
+            self.current_state = DeliveryState.EMERGENCY_STOP
+            self.emergency_stop()
+
+    def state_machine_callback(self):
+        """Main state machine processing"""
+        if self.current_state != self.previous_state:
+            self.handle_state_transition()
+            self.previous_state = self.current_state
+
+        # Process current state
+        if self.current_state == DeliveryState.IDLE:
+            self.process_idle_state()
+        elif self.current_state == DeliveryState.NAVIGATING_TO_PICKUP:
+            self.process_navigating_to_pickup_state()
+        elif self.current_state == DeliveryState.WAITING_AT_PICKUP:
+            self.process_waiting_at_pickup_state()
+        elif self.current_state == DeliveryState.NAVIGATING_TO_DELIVERY:
+            self.process_navigating_to_delivery_state()
+        elif self.current_state == DeliveryState.WAITING_AT_DELIVERY:
+            self.process_waiting_at_delivery_state()
+        elif self.current_state == DeliveryState.RETURNING_TO_BASE:
+            self.process_returning_to_base_state()
+        elif self.current_state == DeliveryState.EMERGENCY_STOP:
+            self.process_emergency_stop_state()
+
+        # Check for timeouts
+        self.check_timeouts()
+
+        # Publish current state
+        state_msg = String()
+        state_msg.data = self.current_state.name
+        self.state_pub.publish(state_msg)
+
+    def handle_state_transition(self):
+        """Handle actions when entering a new state"""
+        if self.current_state == DeliveryState.NAVIGATING_TO_PICKUP:
+            self.get_logger().info('Navigating to pickup location')
+            self.pickup_start_time = time.time()
+        elif self.current_state == DeliveryState.WAITING_AT_PICKUP:
+            self.get_logger().info('Waiting at pickup location')
+        elif self.current_state == DeliveryState.NAVIGATING_TO_DELIVERY:
+            self.get_logger().info('Navigating to delivery location')
+        elif self.current_state == DeliveryState.WAITING_AT_DELIVERY:
+            self.get_logger().info('Waiting at delivery location')
+        elif self.current_state == DeliveryState.RETURNING_TO_BASE:
+            self.get_logger().info('Returning to base')
+        elif self.current_state == DeliveryState.EMERGENCY_STOP:
+            self.emergency_stop()
+
+    def process_idle_state(self):
+        """Process IDLE state"""
+        # Wait for delivery command
+        pass
+
+    def process_navigating_to_pickup_state(self):
+        """Process navigation to pickup state"""
+        # In a real system, this would send navigation goals
+        # For simulation, we'll assume navigation is happening
+        self.get_logger().info('Navigating to pickup location...', throttle_duration_sec=5)
+
+    def process_waiting_at_pickup_state(self):
+        """Process waiting at pickup state"""
+        # Wait for pickup confirmation
+        # In real system, this would wait for human interaction
+        self.get_logger().info('Waiting for package pickup...', throttle_duration_sec=5)
+
+    def process_navigating_to_delivery_state(self):
+        """Process navigation to delivery state"""
+        # Navigate to delivery location
+        self.get_logger().info('Navigating to delivery location...', throttle_duration_sec=5)
+
+    def process_waiting_at_delivery_state(self):
+        """Process waiting at delivery state"""
+        # Wait for delivery confirmation
+        self.get_logger().info('Waiting for package delivery...', throttle_duration_sec=5)
+
+    def process_returning_to_base_state(self):
+        """Process returning to base state"""
+        # Navigate back to base
+        self.get_logger().info('Returning to base...', throttle_duration_sec=5)
+
+    def process_emergency_stop_state(self):
+        """Process emergency stop state"""
+        self.emergency_stop()
+
+    def check_timeouts(self):
+        """Check for delivery/pickup timeouts"""
+        current_time = time.time()
+
+        if (self.current_state == DeliveryState.WAITING_AT_PICKUP and
+            self.pickup_start_time and
+            current_time - self.pickup_start_time > self.pickup_timeout):
+            self.get_logger().warn('Pickup timeout - returning to base')
+            self.current_state = DeliveryState.RETURNING_TO_BASE
+
+        if (self.current_state == DeliveryState.WAITING_AT_DELIVERY and
+            self.delivery_start_time and
+            current_time - self.delivery_start_time > self.delivery_timeout):
+            self.get_logger().warn('Delivery timeout - returning to base')
+            self.current_state = DeliveryState.RETURNING_TO_BASE
+
+    def emergency_stop(self):
+        """Send emergency stop command"""
+        emergency_msg = Bool()
+        emergency_msg.data = True
+        self.emergency_pub.publish(emergency_msg)
+        self.get_logger().warn('Emergency stop activated!')
+
+def main(args=None):
+    rclpy.init(args=args)
+
+    delivery_state_machine = DeliveryStateMachine()
+
+    try:
+        rclpy.spin(delivery_state_machine)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        delivery_state_machine.destroy_node()
+        rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
+```
+
+### 7. Launch File for the Complete System
+
+```python
+# launch/delivery_robot.launch.py
+from launch import LaunchDescription
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, GroupAction
+from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
+from launch_ros.actions import Node, PushRosNamespace
+from launch_ros.substitutions import FindPackageShare
+from ament_index_python.packages import get_package_share_directory
+import os
+
+def generate_launch_description():
+    # Launch arguments
+    use_sim_time = DeclareLaunchArgument(
+        'use_sim_time',
+        default_value='false',
+        description='Use simulation clock if true'
+    )
+
+    robot_namespace = DeclareLaunchArgument(
+        'robot_namespace',
+        default_value='delivery_robot',
+        description='Robot namespace for multi-robot systems'
+    )
+
+    # Robot description parameter
+    robot_description = DeclareLaunchArgument(
+        'robot_description',
+        default_value=PathJoinSubstitution([
+            FindPackageShare('delivery_robot'),
+            'urdf',
+            'robot.urdf.xacro'
+        ]),
+        description='Full path to robot description file to load'
+    )
+
+    # Robot state publisher node
+    robot_state_publisher = Node(
+        package='robot_state_publisher',
+        executable='robot_state_publisher',
+        name='robot_state_publisher',
+        parameters=[
+            {'use_sim_time': LaunchConfiguration('use_sim_time')},
+            {'robot_description': LaunchConfiguration('robot_description')}
+        ],
+        remappings=[
+            ('/tf', 'tf'),
+            ('/tf_static', 'tf_static')
+        ]
+    )
+
+    # Joint state publisher (for simulation)
+    joint_state_publisher = Node(
+        package='joint_state_publisher',
+        executable='joint_state_publisher',
+        name='joint_state_publisher',
+        parameters=[
+            {'use_sim_time': LaunchConfiguration('use_sim_time')}
+        ]
+    )
+
+    # Robot controller node
+    robot_controller = Node(
+        package='delivery_robot',
+        executable='robot_controller',
+        name='robot_controller',
+        parameters=[
+            {'use_sim_time': LaunchConfiguration('use_sim_time')},
+            PathJoinSubstitution([
+                FindPackageShare('delivery_robot'),
+                'config',
+                'robot_params.yaml'
+            ])
+        ],
+        remappings=[
+            ('cmd_vel', 'cmd_vel'),
+            ('odom', 'odom'),
+            ('scan', 'scan')
+        ]
+    )
+
+    # Sensor processor node
+    sensor_processor = Node(
+        package='delivery_robot',
+        executable='sensor_processor',
+        name='sensor_processor',
+        parameters=[
+            {'use_sim_time': LaunchConfiguration('use_sim_time')},
+            PathJoinSubstitution([
+                FindPackageShare('delivery_robot'),
+                'config',
+                'sensors_params.yaml'
+            ])
+        ],
+        remappings=[
+            ('camera/image_raw', 'camera/image_raw'),
+            ('scan', 'scan')
+        ]
+    )
+
+    # Delivery state machine node
+    delivery_state_machine = Node(
+        package='delivery_robot',
+        executable='delivery_state_machine',
+        name='delivery_state_machine',
+        parameters=[
+            {'use_sim_time': LaunchConfiguration('use_sim_time')}
+        ],
+        remappings=[
+            ('delivery_command', 'delivery_command'),
+            ('robot_status', 'robot_status')
+        ]
+    )
+
+    # RViz node
+    rviz = Node(
+        package='rviz2',
+        executable='rviz2',
+        name='rviz2',
+        arguments=['-d', PathJoinSubstitution([
+            FindPackageShare('delivery_robot'),
+            'rviz',
+            'robot_view.rviz'
+        ])],
+        parameters=[
+            {'use_sim_time': LaunchConfiguration('use_sim_time')}
+        ]
+    )
+
+    # Create launch description
+    ld = LaunchDescription()
+
+    # Add launch arguments
+    ld.add_action(use_sim_time)
+    ld.add_action(robot_namespace)
+    ld.add_action(robot_description)
+
+    # Add nodes
+    ld.add_action(robot_state_publisher)
+    ld.add_action(joint_state_publisher)
+    ld.add_action(robot_controller)
+    ld.add_action(sensor_processor)
+    ld.add_action(delivery_state_machine)
+    ld.add_action(rviz)
+
+    return ld
+```
+
+### 8. Configuration Files
+
+```yaml
+# config/robot_params.yaml
+delivery_robot:
+  robot_controller:
+    ros__parameters:
+      max_linear_velocity: 0.5
+      max_angular_velocity: 1.0
+      safety_distance: 0.5
+      robot_radius: 0.3
+```
+
+```yaml
+# config/sensors_params.yaml
+delivery_robot:
+  sensor_processor:
+    ros__parameters:
+      processing_rate: 10.0
+      detection_threshold: 0.5
+```
+
+### 9. RViz Configuration
+
+```yaml
+# rviz/robot_view.rviz
+Panels:
+  - Class: rviz_common/Displays
+    Help Height: 78
+    Name: Displays
+    Property Tree Widget:
+      Expanded:
+        - /Global Options1
+        - /Status1
+        - /RobotModel1
+        - /LaserScan1
+      Splitter Ratio: 0.5
+    Tree Height: 617
+  - Class: rviz_common/Selection
+    Name: Selection
+  - Class: rviz_common/Tool Properties
+    Expanded:
+      - /2D Goal Pose1
+      - /Publish Point1
+    Name: Tool Properties
+    Splitter Ratio: 0.5886790156364441
+  - Class: rviz_common/Views
+    Expanded:
+      - /Current View1
+    Name: Views
+    Splitter Ratio: 0.5
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Alpha: 0.5
+      Cell Size: 1
+      Class: rviz_default_plugins/Grid
+      Color: 160; 160; 164
+      Enabled: true
+      Line Style:
+        Line Width: 0.029999999329447746
+        Value: Lines
+      Name: Grid
+      Normal Cell Count: 0
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Plane: XY
+      Plane Cell Count: 10
+      Reference Frame: <Fixed Frame>
+      Value: true
+    - Class: rviz_default_plugins/RobotModel
+      Enabled: true
+      Name: RobotModel
+      Description Topic:
+        Value: /robot_description
+      Visual Enabled: true
+      Collision Enabled: false
+      TF Prefix: ""
+      Update Interval: 0
+      Alpha: 1
+      Show Axes: false
+      Show Trail: false
+      Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz_default_plugins/LaserScan
+      Color: 255; 255; 255
+      Color Transformer: Intensity
+      Decay Time: 0
+      Enabled: true
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 0
+      Min Color: 0; 0; 0
+      Min Intensity: 0
+      Name: LaserScan
+      Position Transformer: XYZ
+      Queue Size: 10
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 0.009999999776482582
+      Style: Flat Squares
+      Topic:
+        Value: /scan
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: true
+  Enabled: true
+  Global Options:
+    Background Color: 48; 48; 48
+    Fixed Frame: base_link
+    Frame Rate: 30
+  Name: root
+  Tools:
+    - Class: rviz_default_plugins/Interact
+      Hide Inactive Objects: true
+    - Class: rviz_default_plugins/MoveCamera
+    - Class: rviz_default_plugins/Select
+    - Class: rviz_default_plugins/FocusCamera
+    - Class: rviz_default_plugins/2D Goal Pose
+      Topic:
+        Value: /goal_pose
+    - Class: rviz_default_plugins/Publish Point
+      Single click: true
+      Topic:
+        Value: /clicked_point
+  Transformation:
+    Current:
+      Class: rviz_default_plugins/TF
+  Value: true
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Name: Current View
+      Target Frame: base_link
+      Value: Orbit (rviz)
+      Yaw: 0
+      Pitch: 0
+      Roll: 0
+      Distance: 10
+      Focal Point:
+        X: 0
+        Y: 0
+        Z: 0
+      Focal Shape Fixed Size: true
+      Focal Shape Size: 0.05000000074505806
+    Saved: ~
+Window Geometry:
+  Displays:
+    collapsed: false
+  Height: 846
+  Hide Left Dock: false
+  Hide Right Dock: false
+  QMainWindow State: 000000ff00000000fd000000040000000000000156000002f4fc0200000008fb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003d000002f4000000c900fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261000000010000010f000002f4fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073000000003d000002f4000000a400fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000004420000003efc0100000002fb0000000800540069006d00650100000000000004420000000000000000fb0000000800540069006d006501000000000000045000000000000000000000023f000002f400000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  Width: 1200
+  X: 72
+  Y: 60
+```
+
+## 🧪 Hands-On Exercise: Complete the Delivery Robot System
+
+Complete the autonomous delivery robot system with the following requirements:
+
+**Expected Time:** 90 minutes
+
+**Requirements:**
+- Complete all package files and structure
+- Implement navigation to pickup and delivery locations
+- Add object detection and avoidance
+- Create simulation launch file
+- Test the complete system integration
+
+**Instructions:**
+1. Create the complete package structure with all files
+2. Implement the robot controller with navigation capabilities
+3. Add sensor processing for obstacle detection
+4. Create the state machine for delivery operations
+5. Test the system with launch files
+
+**Solution Hints:**
+- Use Nav2 for navigation capabilities
+- Implement proper error handling and safety measures
+- Test each component individually before system integration
+- Use parameters for configuration flexibility
+
+## 💡 Key Takeaways
+
+- **Complete ROS 2 packages** integrate all core concepts: nodes, topics, services, actions, parameters, and URDF
+- **Modular design** with separate nodes for different functions improves maintainability
+- **Launch files** orchestrate complex systems with proper configuration
+- **Parameters** enable runtime configuration without code changes
+- **State machines** are powerful for managing complex robotic behaviors
+
+## 📚 Further Reading
+
+- [ROS 2 Package Development](https://docs.ros.org/en/rolling/How-To-Guides/Creating-Your-First-ROS2-Package.html)
+- [ROS 2 Best Practices](https://docs.ros.org/en/rolling/The-ROS2-Project/Contributing/Code-Style-Language-Versions.html)
+- [Navigation Stack (Nav2)](https://navigation.ros.org/)
+
+---
+
+**Module Complete:** You've successfully built a complete ROS 2 package that integrates all the concepts from Module 1. Continue to [Module 2: Gazebo & Unity - Digital Twin](/module-2/introduction)

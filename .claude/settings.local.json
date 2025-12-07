@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir docsmodule-2)",
+      "Bash(mkdir -p docs/module-2)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
