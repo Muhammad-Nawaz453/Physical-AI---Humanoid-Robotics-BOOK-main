@@ -7,11 +7,10 @@ const config: Config = {
   tagline: 'Master the Future of Embodied Intelligence',
   favicon: 'img/favicon.ico',
 
-  url: 'https://github.com/Muhammad-Nawaz453/',
-  baseUrl: 'https://github.com/Muhammad-Nawaz453/Physical-AI---Humanoid-Robotics',
-
-  organizationName: 'https://github.com/Muhammad-Nawaz453/',
-  projectName: 'Physical-AI---Humanoid-Robotics',
+  url: 'https://Muhammad-Nawaz453.github.io',
+  baseUrl: 'https://github.com/Muhammad-Nawaz453/Physical-AI---Humanoid-Robotics-BOOK-main',
+  organizationName: 'Muhammad-Nawaz453',
+  projectName: 'Physical-AI---Humanoid-Robotics-BOOK-main',
 
   onBrokenLinks: 'warn',
   onBrokenMarkdownLinks: 'warn',
