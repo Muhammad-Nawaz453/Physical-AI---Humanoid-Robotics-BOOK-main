@@ -1,0 +1,19 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "main.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "main.py"
+    }
+  ],
+  "env": {
+    "GEMINI_API_KEY": "AIzaSyC8v2ED4frvuhH86-kvArJKAJDiXjrG9ac",
+    "DATABASE_URL": "postgresql://neondb_owner:npg_DOerghZESb81@ep-small-art-adt6wtfk-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require"
+  }
+}
