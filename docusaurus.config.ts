@@ -8,9 +8,9 @@ const config: Config = {
   favicon: 'img/favicon.ico',
 
   url: 'https://Muhammad-Nawaz453.github.io',
-  baseUrl: 'https://github.com/Muhammad-Nawaz453/Physical-AI---Humanoid-Robotics-BOOK/',
+  baseUrl: 'https://github.com/Muhammad-Nawaz453/Physical-AI---Humanoid-Robotics-BOOK-main/',
   organizationName: 'Muhammad-Nawaz453',
-  projectName: 'Physical-AI---Humanoid-Robotics-BOOK',
+  projectName: 'Physical-AI---Humanoid-Robotics-BOOK-main',
 
   onBrokenLinks: 'warn',
   onBrokenMarkdownLinks: 'warn',
