@@ -7,8 +7,8 @@ const config: Config = {
   tagline: 'Master the Future of Embodied Intelligence',
   favicon: 'img/favicon.ico',
 
-  url: 'https://Muhammad-Nawaz453.github.io',
-  baseUrl: 'https://github.com/Muhammad-Nawaz453/Physical-AI---Humanoid-Robotics-BOOK-main/',
+  url: 'https://physical-ai-humanoid-robotics-book-peach.vercel.app/',
+  baseUrl: '/',
   organizationName: 'Muhammad-Nawaz453',
   projectName: 'Physical-AI---Humanoid-Robotics-BOOK-main',
 
