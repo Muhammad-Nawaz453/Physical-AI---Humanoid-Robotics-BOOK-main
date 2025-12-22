@@ -3,16 +3,16 @@
  */
 
 // Your Vercel backend URL
-const BACKEND_URL = 'https://physical-ai-humanoid-robotics-nmkiaqiyx-muhammadnawazs-projects.vercel.app/';  // UPDATE THIS!
+const BACKEND_URL = 'https://physical-ai-humanoid-robotics-eosin-seven.vercel.app/';  // UPDATE THIS!
 
 // Determine environment
-const isProduction = typeof window !== 'undefined' 
+const isProduction = typeof window !== 'undefined'
   ? window.location.hostname !== 'localhost'
   : false;
 
 // Export API URL
-export const API_URL = isProduction 
-  ? BACKEND_URL 
+export const API_URL = isProduction
+  ? BACKEND_URL
   : 'http://localhost:8000';
 
 // API Endpoints
