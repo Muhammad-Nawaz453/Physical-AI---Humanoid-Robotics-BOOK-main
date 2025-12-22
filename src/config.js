@@ -3,7 +3,7 @@
  */
 
 // Your Vercel backend URL
-const BACKEND_URL = 'https://physical-ai-humanoid-robotics-eosin-seven.vercel.app/';  // UPDATE THIS!
+const BACKEND_URL = 'https://physical-ai-humanoid-robotics-eosin-seven.vercel.app';  // UPDATE THIS!
 
 // Determine environment
 const isProduction = typeof window !== 'undefined'
